@@ -1,0 +1,3 @@
+trigger oppAsign on Opportunity (after insert) {
+
+}
