@@ -19,7 +19,7 @@ trigger oppAsign on Opportunity (before insert) {
     {
         if(opp.Amount>=5000 && opp.Amount<=19999)
             salesperson_type = tipo3;
-        else if(opp.Amount>20000 && opp.Amount<=99999)
+        else if(opp.Amount>=20000 && opp.Amount<=99999)
             salesperson_type = tipo2;
         else
             salesperson_type = tipo1;
@@ -28,7 +28,7 @@ trigger oppAsign on Opportunity (before insert) {
        {
            if(opp.Amount>=0 && opp.Amount<=99999)
             salesperson_type = tipo3;
-        else if(opp.Amount>100000 && opp.Amount<=499999)
+        else if(opp.Amount>=100000 && opp.Amount<=499999)
             salesperson_type = tipo2;
         else
             salesperson_type = tipo1;
@@ -39,12 +39,14 @@ trigger oppAsign on Opportunity (before insert) {
     /*Hacer query de la cola que tenga ese nombre
      * Regresamos |ID queueID|
 	*/
+      system.debug(salesperson_type); 
     Group queue_o = [SELECT id,name from Group where Name=:salesperson_type and Type = 'Queue' ][0];
     Id queueID = queue_o.Id;
     /*Consultar lista de usuarios que permanezcan a esa cola
      * Regresamos |List<User> queueusers|
 	*/
     List<GroupMember> members_in_queue = [SELECT UserOrGroupId FROM GroupMember WHERE Group.Id =:queueID];
+       system.debug(members_in_queue.size());
     List<ID> user_ids = new List<ID>();
     for (GroupMember gm : members_in_queue)
     {
@@ -70,4 +72,5 @@ trigger oppAsign on Opportunity (before insert) {
     /*Asignar la oportunidad al usuario seleccionado*/
     opp.OwnerId= selected_user.id;
    }
+   
 }
