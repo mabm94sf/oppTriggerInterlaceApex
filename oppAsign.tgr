@@ -1,3 +1,29 @@
 trigger oppAsign on Opportunity (after insert) {
 
+    /*Determinar el tipo de vendedor al que se le asignará
+     * dependiendo el tipo de proyecto y el importe de la oportunidad
+     * Tipo               | Venta 	 			  |Renta
+     * -----------------------------------------------------------------
+     * Tipo I             |> $ 100,000			  |> $ 500,000
+     * Tipo II			  |  $  20,000 - $99,999  |  $ 100,000 - $499,999
+     * Tipo III			  |  $   5,000 - $19,999  |  $       0 - $ 99,999
+     * Regresamos |String salesperson_type|
+     */
+    
+    
+    /*Hacer query de la cola que tenga ese nombre
+     * Regresamos |ID queueID|
+	*/
+    
+    /*Consultar lista de usuarios que permanezcan a esa cola
+     * Regresamos |List<User> queueusers|
+	*/
+    
+    /*Revisar quién tiene menos oportunidades
+	 * Regresamos |User selected_user| 
+	*/
+    
+    /*Asginar la oportunidad al usuario seleccionado*/
+    
+	
 }
