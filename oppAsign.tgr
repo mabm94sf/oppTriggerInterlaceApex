@@ -9,60 +9,63 @@ trigger oppAsign on Opportunity (before insert) {
      * Tipo III			  |  $   5,000 - $19,999  |  $       0 - $ 99,999
      * Regresamos |String salesperson_type|
      */
-    string salesperson_type;
-    string tipo1='Tipo I';
-    string tipo2='Tipo II';
-    string tipo3='Tipo III';
-    
+    String salesperson_type;
+    String tipo1='Tipo I';
+    String tipo2='Tipo II';
+    String tipo3='Tipo III';
+
    for (Opportunity opp : Trigger.new){
+       System.assert(opp.Amount < 0, 'El monto debe ser un valor positivo.');
     if(opp.Tipo_de_proyecto__c=='Venta')
     {
-        if(opp.Amount>=5000 && opp.Amount<=19999)
+        System.assert(opp.Amount < 5000, 'El monto de un proyecto de tipo venta no puede ser menor a $5,000.00');
+        if(opp.Amount>=5000 && opp.Amount<20000)
             salesperson_type = tipo3;
-        else if(opp.Amount>=20000 && opp.Amount<=99999)
+        else if(opp.Amount>=20000 && opp.Amount<=100000)
             salesperson_type = tipo2;
         else
             salesperson_type = tipo1;
     }
        else if(opp.Tipo_de_proyecto__c=='Renta')
        {
-           if(opp.Amount>=0 && opp.Amount<=99999)
+           if(opp.Amount>=0 && opp.Amount<100000)
             salesperson_type = tipo3;
-        else if(opp.Amount>=100000 && opp.Amount<=499999)
+        else if(opp.Amount>=100000 && opp.Amount<500000)
             salesperson_type = tipo2;
         else
             salesperson_type = tipo1;
        }
    else
+   {
+       System.assert(true, 'No se ha especificado el tipo de proyecto.');
        return;
-    
+   }
+
     /*Hacer query de la cola que tenga ese nombre
      * Regresamos |ID queueID|
 	*/
-      system.debug(salesperson_type); 
     Group queue_o = [SELECT id,name from Group where Name=:salesperson_type and Type = 'Queue' ][0];
     Id queueID = queue_o.Id;
     /*Consultar lista de usuarios que permanezcan a esa cola
      * Regresamos |List<User> queueusers|
 	*/
     List<GroupMember> members_in_queue = [SELECT UserOrGroupId FROM GroupMember WHERE Group.Id =:queueID];
-       system.debug(members_in_queue.size());
     List<ID> user_ids = new List<ID>();
     for (GroupMember gm : members_in_queue)
     {
         user_ids.add(gm.UserOrGroupID);
     }
     List<User> queueusers = [SELECT id,name FROM User WHERE id=:user_ids];
-       
+
     /*Revisar quién tiene menos oportunidades
-	 * Regresamos |User selected_user| 
+	 * Regresamos |User selected_user|
 	*/
        integer  aux=10000;
        integer count;
        User selected_user = new User();
     for (User u : queueusers)
     {
-     count = [SELECT count() from Opportunity where ownerid=:u.id];  
+     count = [SELECT count() from Opportunity where ownerid=:u.id];
         if(count<aux)
             {
                 aux=count;
@@ -72,5 +75,4 @@ trigger oppAsign on Opportunity (before insert) {
     /*Asignar la oportunidad al usuario seleccionado*/
     opp.OwnerId= selected_user.id;
    }
-   
 }
