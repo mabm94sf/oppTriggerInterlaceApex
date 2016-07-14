@@ -55,8 +55,19 @@ trigger oppAsign on Opportunity (before insert) {
     /*Revisar quién tiene menos oportunidades
 	 * Regresamos |User selected_user| 
 	*/
-    
+       integer  aux=10000;
+       integer count;
+       User selected_user = new User();
+    for (User u : queueusers)
+    {
+     count = [SELECT count() from Opportunity where ownerid=:u.id];  
+        if(count<aux)
+            {
+                aux=count;
+                selected_user=u;
+            }
+    }
     /*Asignar la oportunidad al usuario seleccionado*/
-    
+    opp.OwnerId= selected_user.id;
    }
 }
