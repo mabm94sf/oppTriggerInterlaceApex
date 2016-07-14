@@ -10,20 +10,28 @@ trigger oppAsign on Opportunity (after insert) {
      * Regresamos |String salesperson_type|
      */
     
+    String salesperson_type = 'Tipo I';
     
     /*Hacer query de la cola que tenga ese nombre
      * Regresamos |ID queueID|
 	*/
-    
+    Group queue_o = [SELECT id,name from Group where Name=:salesperson_type and Type = 'Queue' ][0];
+    Id queueID = queue_o.Id;
     /*Consultar lista de usuarios que permanezcan a esa cola
      * Regresamos |List<User> queueusers|
 	*/
-    
+    List<GroupMember> members_in_queue = [SELECT UserOrGroupId FROM GroupMember WHERE Group.Id =:queueID];
+    List<ID> user_ids = new List<ID>();
+    for (GroupMember gm : members_in_queue)
+    {
+        user_ids.add(gm.UserOrGroupID);
+    }
+    List<User> queueusers = [SELECT id,name FROM User WHERE id=:user_ids];
     /*Revisar quién tiene menos oportunidades
 	 * Regresamos |User selected_user| 
 	*/
     
-    /*Asginar la oportunidad al usuario seleccionado*/
+    /*Asignar la oportunidad al usuario seleccionado*/
     
 	
 }
