@@ -1,4 +1,4 @@
-trigger oppAsign on Opportunity (after insert) {
+trigger oppAsign on Opportunity (before insert) {
 
     /*Determinar el tipo de vendedor al que se le asignará
      * dependiendo el tipo de proyecto y el importe de la oportunidad
@@ -9,8 +9,32 @@ trigger oppAsign on Opportunity (after insert) {
      * Tipo III			  |  $   5,000 - $19,999  |  $       0 - $ 99,999
      * Regresamos |String salesperson_type|
      */
+    string salesperson_type;
+    string tipo1='Tipo I';
+    string tipo2='Tipo II';
+    string tipo3='Tipo III';
     
-    String salesperson_type = 'Tipo I';
+   for (Opportunity opp : Trigger.new){
+    if(opp.Tipo_de_proyecto__c=='Venta')
+    {
+        if(opp.Amount>=5000 && opp.Amount<=19999)
+            salesperson_type = tipo3;
+        else if(opp.Amount>20000 && opp.Amount<=99999)
+            salesperson_type = tipo2;
+        else
+            salesperson_type = tipo1;
+    }
+       else if(opp.Tipo_de_proyecto__c=='Renta')
+       {
+           if(opp.Amount>=0 && opp.Amount<=99999)
+            salesperson_type = tipo3;
+        else if(opp.Amount>100000 && opp.Amount<=499999)
+            salesperson_type = tipo2;
+        else
+            salesperson_type = tipo1;
+       }
+   else
+       return;
     
     /*Hacer query de la cola que tenga ese nombre
      * Regresamos |ID queueID|
@@ -27,11 +51,12 @@ trigger oppAsign on Opportunity (after insert) {
         user_ids.add(gm.UserOrGroupID);
     }
     List<User> queueusers = [SELECT id,name FROM User WHERE id=:user_ids];
+       
     /*Revisar quién tiene menos oportunidades
 	 * Regresamos |User selected_user| 
 	*/
     
     /*Asignar la oportunidad al usuario seleccionado*/
     
-	
+   }
 }
