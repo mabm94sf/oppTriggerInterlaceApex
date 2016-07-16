@@ -1,0 +1,90 @@
+trigger oppAssignFromLead on Lead (after update)
+{
+    /*Determinar el tipo de vendedor al que se le asignará
+    * dependiendo el tipo de proyecto y el importe de la oportunidad
+    * Tipo                | Venta 	 			       |Renta
+    * -----------------------------------------------------------------
+    * Tipo I              |  $ 100,000  < x	           |  $ 500,000  < x
+    * Tipo II			  |  $  20,000 <= x < $100,000 |  $ 100,000 <= x < $500,000
+    * Tipo III			  |  $   5,000 <= x < $ 20,000 |  $       0 <= x < $100,000
+    * Regresamos |String salesperson_type|
+    */
+    String salesperson_type;
+    String tipo1='Tipo I';
+    String tipo2='Tipo II';
+    String tipo3='Tipo III';
+    /*
+    * Opportinuty to update (not new)
+    */
+    Opportunity opp;
+
+    for(Lead l : Trigger.new)
+    {
+        if(l.isConverted)
+        {
+            Id oppId = l.ConvertedOpportunityId;
+            opp = [SELECT Id, Name, Tipo_de_proyecto__c FROM Opportunity WHERE Id = :oppId][0];
+
+            if(opp.Tipo_de_proyecto__c=='Venta')
+            {
+                System.assert(opp.Amount < 5000, 'El monto de un proyecto de tipo venta no puede ser menor a $5,000.00');
+                if(opp.Amount>=5000 && opp.Amount<20000)
+                    salesperson_type = tipo3;
+                else if(opp.Amount>=20000 && opp.Amount<=100000)
+                    salesperson_type = tipo2;
+                else
+                    salesperson_type = tipo1;
+            }
+            else if(opp.Tipo_de_proyecto__c=='Renta')
+            {
+                if(opp.Amount>=0 && opp.Amount<100000)
+                    salesperson_type = tipo3;
+                else if(opp.Amount>=100000 && opp.Amount<500000)
+                    salesperson_type = tipo2;
+                else
+                    salesperson_type = tipo1;
+            }
+            else
+            {
+                System.assert(true, 'No se ha especificado el tipo de proyecto.');
+                return;
+            }
+
+            /*Hacer query de la cola que tenga ese nombre
+            * Regresamos |ID queueID|
+            */
+            Group queue_o = [SELECT id,name from Group where Name=:salesperson_type and Type = 'Queue' ][0];
+            Id queueID = queue_o.Id;
+            /*Consultar lista de usuarios que permanezcan a esa cola
+            * Regresamos |List<User> queueusers|
+            */
+            List<GroupMember> members_in_queue = [SELECT UserOrGroupId FROM GroupMember WHERE Group.Id =:queueID];
+            List<ID> user_ids = new List<ID>();
+            for (GroupMember gm : members_in_queue)
+            {
+                user_ids.add(gm.UserOrGroupID);
+            }
+            List<User> queueusers = [SELECT id,name FROM User WHERE id=:user_ids];
+
+            /*Revisar quién tiene menos oportunidades
+			* Regresamos |User selected_user|
+			*/
+            integer  aux=10000;
+            integer count;
+            User selected_user = new User();
+            for (User u : queueusers)
+            {
+                count = [SELECT count() from Opportunity where ownerid=:u.id];
+                if(count<aux)
+                {
+                    aux=count;
+                    selected_user=u;
+                }
+            }
+            /*Asignar la oportunidad al usuario seleccionado*/
+            opp.OwnerId= selected_user.id;
+
+        }
+    }
+
+}
