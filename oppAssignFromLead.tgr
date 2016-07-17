@@ -17,17 +17,22 @@ trigger oppAssignFromLead on Lead (after update)
     * Opportinuty to update (not new)
     */
     Opportunity opp;
-
+    
     for(Lead l : Trigger.new)
     {
         if(l.isConverted)
         {
             Id oppId = l.ConvertedOpportunityId;
+            /*
+             * ¿Se va a especificar el tipo de proyecto desde el Lead? 
+             * String tproylead = l.Tipo_de_proyecto__c
+			*/
             opp = [SELECT Id, Name, Tipo_de_proyecto__c FROM Opportunity WHERE Id = :oppId][0];
-
+            opp.Amount = l.Importe__c;
+            
             if(opp.Tipo_de_proyecto__c=='Venta')
             {
-                System.assert(opp.Amount < 5000, 'El monto de un proyecto de tipo venta no puede ser menor a $5,000.00');
+                System.assert(opp.Amount >= 5000, 'El monto de un proyecto de tipo venta no puede ser menor a $5,000.00 ');
                 if(opp.Amount>=5000 && opp.Amount<20000)
                     salesperson_type = tipo3;
                 else if(opp.Amount>=20000 && opp.Amount<=100000)
@@ -46,10 +51,10 @@ trigger oppAssignFromLead on Lead (after update)
             }
             else
             {
-                System.assert(true, 'No se ha especificado el tipo de proyecto.');
+                System.assert(false, 'No se ha especificado el tipo de proyecto.');
                 return;
             }
-
+            
             /*Hacer query de la cola que tenga ese nombre
             * Regresamos |ID queueID|
             */
@@ -59,13 +64,14 @@ trigger oppAssignFromLead on Lead (after update)
             * Regresamos |List<User> queueusers|
             */
             List<GroupMember> members_in_queue = [SELECT UserOrGroupId FROM GroupMember WHERE Group.Id =:queueID];
+            System.assert(!members_in_queue.isEmpty(), 'No hay miembros en la cola: ' + queue_o.Name);
             List<ID> user_ids = new List<ID>();
             for (GroupMember gm : members_in_queue)
             {
                 user_ids.add(gm.UserOrGroupID);
             }
             List<User> queueusers = [SELECT id,name FROM User WHERE id=:user_ids];
-
+            
             /*Revisar quién tiene menos oportunidades
 			* Regresamos |User selected_user|
 			*/
@@ -83,8 +89,10 @@ trigger oppAssignFromLead on Lead (after update)
             }
             /*Asignar la oportunidad al usuario seleccionado*/
             opp.OwnerId= selected_user.id;
-
+            
+            update opp;
+            
         }
     }
-
+    
 }
