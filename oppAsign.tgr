@@ -15,6 +15,8 @@ trigger oppAsign on Opportunity (before insert) {
     String tipo3='Tipo III';
 
    for (Opportunity opp : Trigger.new){
+	if(opp.Amount<0 && opp.Tipo_de_proyecto__c==null) //Probablemente provenga de una conversión
+	return
        if(opp.Amount < 0) opp.addError('El monto debe ser un valor positivo.');
        
     if(opp.Tipo_de_proyecto__c=='Venta')
