@@ -2,11 +2,11 @@ trigger oppAsign on Opportunity (before insert) {
 
     /*Determinar el tipo de vendedor al que se le asignará
      * dependiendo el tipo de proyecto y el importe de la oportunidad
-     * Tipo               | Venta 	 			  |Renta
+     * Tipo               | Venta                 |Renta
      * -----------------------------------------------------------------
-     * Tipo I             |> $ 100,000			  |> $ 500,000
-     * Tipo II			  |  $  20,000 - $99,999  |  $ 100,000 - $499,999
-     * Tipo III			  |  $   5,000 - $19,999  |  $       0 - $ 99,999
+     * Tipo I             |> $ 100,000            |> $ 500,000
+     * Tipo II            |  $  20,000 - $99,999  |  $ 100,000 - $499,999
+     * Tipo III           |  $   5,000 - $19,999  |  $       0 - $ 99,999
      * Regresamos |String salesperson_type|
      */
     String salesperson_type;
@@ -15,10 +15,11 @@ trigger oppAsign on Opportunity (before insert) {
     String tipo3='Tipo III';
 
    for (Opportunity opp : Trigger.new){
-       System.assert(opp.Amount < 0, 'El monto debe ser un valor positivo.');
+       if(opp.Amount < 0) opp.addError('El monto debe ser un valor positivo.');
+       
     if(opp.Tipo_de_proyecto__c=='Venta')
     {
-        System.assert(opp.Amount < 5000, 'El monto de un proyecto de tipo venta no puede ser menor a $5,000.00');
+        if(opp.Amount < 5000) opp.addError('El monto de un proyecto de tipo venta no puede ser menor a $5,000.00');
         if(opp.Amount>=5000 && opp.Amount<20000)
             salesperson_type = tipo3;
         else if(opp.Amount>=20000 && opp.Amount<=100000)
@@ -37,19 +38,21 @@ trigger oppAsign on Opportunity (before insert) {
        }
    else
    {
-       System.assert(true, 'No se ha especificado el tipo de proyecto.');
+       opp.addError('Debe especificar el tipo de proyecto');
        return;
    }
 
     /*Hacer query de la cola que tenga ese nombre
      * Regresamos |ID queueID|
-	*/
+    */
     Group queue_o = [SELECT id,name from Group where Name=:salesperson_type and Type = 'Queue' ][0];
     Id queueID = queue_o.Id;
+    if(queueID == null) opp.addError('No existe la cola \'' + salesperson_type + '\'.');
     /*Consultar lista de usuarios que permanezcan a esa cola
      * Regresamos |List<User> queueusers|
-	*/
+    */
     List<GroupMember> members_in_queue = [SELECT UserOrGroupId FROM GroupMember WHERE Group.Id =:queueID];
+    if(members_in_queue.isEmpty()) opp.addError('No hay miembros en la cola ' + salesperson_type);
     List<ID> user_ids = new List<ID>();
     for (GroupMember gm : members_in_queue)
     {
@@ -58,9 +61,9 @@ trigger oppAsign on Opportunity (before insert) {
     List<User> queueusers = [SELECT id,name FROM User WHERE id=:user_ids];
 
     /*Revisar quién tiene menos oportunidades
-	 * Regresamos |User selected_user|
-	*/
-       integer  aux=10000;
+     * Regresamos |User selected_user|
+    */
+       integer  aux=65000; //Infinity
        integer count;
        User selected_user = new User();
     for (User u : queueusers)
